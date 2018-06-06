@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_weight="10"
     tools:context=".MainActivity">
 
     <TextView
@@ -15,6 +16,18 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
         android:textSize="32sp"
+
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textview_2"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:textSize="24sp"
+        android:layout_marginTop="100dp"
+        android:text="test" />
+
 
 </RelativeLayout>

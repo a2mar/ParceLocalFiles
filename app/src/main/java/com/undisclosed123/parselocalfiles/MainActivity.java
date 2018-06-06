@@ -6,9 +6,12 @@ import android.util.Xml;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -38,6 +41,61 @@ public class MainActivity extends AppCompatActivity {
         writeXML();
 
 
+        readXML();
+
+
+
+    }
+
+    private void readXML() {
+        try {
+
+            FileInputStream fis = new FileInputStream(mOutFile);
+            XmlPullParser parser = Xml.newPullParser();
+            parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+            parser.setInput(fis, null);
+            parser.nextTag();
+
+            extractXML(parser);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        }
+
+
+
+
+
+    }
+
+    private void extractXML(XmlPullParser parser) {
+        TextView tv = findViewById(R.id.textview_2);
+        //StringBuffer sb = new StringBuffer();
+        String sTest = "";
+
+        try {
+            parser.require(XmlPullParser.START_TAG, null, "doc");
+
+            while(parser.next() != XmlPullParser.END_TAG){
+              //  sb.append(parser.getText());
+
+            sTest = sTest + parser.getText();
+            parser.nextTag();
+
+            }
+
+        } catch (XmlPullParserException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //tv.setText(sb);
+        tv.setText(sTest);      // Die resultierenden Zeienabstände kommen von der unsauberen  Formatierund des xml-Files, worin "xmlSerializer.text ="\n"; " verwendet wurde.
     }
 
     private void createPriority() {

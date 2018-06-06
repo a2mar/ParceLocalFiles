@@ -3,6 +3,7 @@ package com.undisclosed123.parselocalfiles;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Xml;
+import android.widget.TextView;
 
 import org.xmlpull.v1.XmlSerializer;
 
@@ -27,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
 
         //mOutFile = new File(getFileStreamPath(sOutPut).getPath());
         mOutFile = new File(getFilesDir(),sOutPut);     //same effect, but I UNDERSTAND IT :)
+
+        TextView tv = findViewById(R.id.title_1);
+        tv.setText("this text was changed");
 
         createWords();
         createPriority();

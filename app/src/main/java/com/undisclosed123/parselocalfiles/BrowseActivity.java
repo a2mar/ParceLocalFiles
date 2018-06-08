@@ -1,9 +1,12 @@
 package com.undisclosed123.parselocalfiles;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Layout;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -28,13 +31,23 @@ public class BrowseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browse);
 
-        //addFakeFileList();
+        Intent intent = getIntent();
 
-        file = Environment.getExternalStorageDirectory();
-       // hasParent = true;   //makeshift statement, if statement needed
-        while (minTwoSlash()){
-            file = file.getParentFile();
-            minTwoSlash();
+        if(intent.hasExtra("newPath")) {
+            String pathDown = intent.getStringExtra("newPath");
+            TextView tv_3 = findViewById(R.id.path_list);
+            tv_3.setText(pathDown);
+            file = new File(pathDown);
+        }
+        else {
+
+            //file = new File("/1/2/3/4/5/6/7/8/9");
+            file = Environment.getExternalStorageDirectory();
+            // hasParent = true;   //makeshift statement, if statement needed
+            while (minTwoSlash()) {
+                file = file.getParentFile();
+                minTwoSlash();
+            }
         }
 
 
@@ -82,14 +95,14 @@ public class BrowseActivity extends AppCompatActivity {
         tv2.setText(pathes);
 
         LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-//        for(File mFile:currentDir){
-//            TextView newView = (TextView) inflater.inflate(R.layout.file_entry, null);
-//
-//            String entry = mFile.getAbsolutePath();
-//            newView.setText(entry);
-//            LinearLayout innerParentLayout = findViewById(R.id.parent_f);
-//            innerParentLayout.addView(newView, innerParentLayout.getChildCount());
-//        }
+        for(File mFile:currentDir){
+            TextView newView = (TextView) inflater.inflate(R.layout.file_entry, null);
+
+            String entry = mFile.getAbsolutePath();
+            newView.setText(entry);
+            LinearLayout innerParentLayout = findViewById(R.id.parent_f);
+            innerParentLayout.addView(newView, innerParentLayout.getChildCount());
+        }
 
     }
 
@@ -142,5 +155,17 @@ public class BrowseActivity extends AppCompatActivity {
     }
 
     public void goParentFile(View view) {
+    }
+
+    public void enterDirectory(View view) {
+        TextView tv_1 = (TextView) view;
+        String temp = (String)tv_1.getText();
+
+        Intent intent = new Intent(BrowseActivity.this, BrowseActivity.class);
+
+        intent.putExtra("newPath", temp);
+        startActivity(intent);
+
+
     }
 }

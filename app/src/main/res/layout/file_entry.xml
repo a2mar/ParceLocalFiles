@@ -10,6 +10,7 @@
     android:height="45dp"
     android:gravity="center_vertical"
     android:layout_marginLeft="10dp"
+    android:onClick="enterDirectory"
     xmlns:android="http://schemas.android.com/apk/res/android"
     />
 

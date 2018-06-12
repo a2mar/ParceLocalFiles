@@ -1,10 +1,15 @@
 package com.undisclosed123.parselocalfiles;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Xml;
 import android.widget.TextView;
 
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
@@ -16,6 +21,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Scanner;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+
 
 public class ParseActivity extends AppCompatActivity {
 
@@ -23,11 +42,14 @@ public class ParseActivity extends AppCompatActivity {
     private File mOutFile;
     private ArrayList<String> mListWords;
     private int[] priority;
+    private String passedPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_parse);
+        Intent intent = getIntent();
+        passedPath = intent.getStringExtra("path");
 
         //mOutFile = new File(getFileStreamPath(sOutPut).getPath());
         mOutFile = new File(getFilesDir(),sOutPut);     //same effect, but I UNDERSTAND IT :)
@@ -35,14 +57,9 @@ public class ParseActivity extends AppCompatActivity {
         TextView tv = findViewById(R.id.title_1);
         tv.setText("this text was changed");
 
-        createWords();
-        createPriority();
         writeXML();
 
-
         readXML();
-
-
 
     }
 
@@ -64,11 +81,6 @@ public class ParseActivity extends AppCompatActivity {
         } catch (XmlPullParserException e) {
             e.printStackTrace();
         }
-
-
-
-
-
     }
 
     private void extractXML(XmlPullParser parser) {
@@ -97,83 +109,84 @@ public class ParseActivity extends AppCompatActivity {
         tv.setText(sTest);      // Die resultierenden Zeienabstände kommen von der unsauberen  Formatierund des xml-Files, worin "xmlSerializer.text ="\n"; " verwendet wurde.
     }
 
-    private void createPriority() {
-        priority = new int[11];
-
-        for(int i = 0; i<= 10; i++){
-            priority[i]= i*2;
-        }
-
-    }
-
     private void writeXML() {
+
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream(mOutFile);
-            XmlSerializer xmlSerializer = Xml.newSerializer();
-            StringWriter writer = new StringWriter();
+            File userText = new File(passedPath);
+            Scanner scn = new Scanner(new FileInputStream(userText), "UTF-8");
+            String separate = ";";
 
-            xmlSerializer.setOutput(writer);
-            xmlSerializer.startDocument("UTF-8", true);
-            xmlSerializer.text("\n");
-            xmlSerializer.startTag(null, "doc");
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
 
-            String vocabulary = "vocabulary";
-            String word = "word";
-            String prio = "priority";
-            String currentWord;
+            //root element
+            Document doc = docBuilder.newDocument();
+            Element rootElement = doc.createElement("Collection");
+            doc.appendChild(rootElement);
 
-            try {
-                for (int i = 0; i <= 10; i++) {
-                    currentWord = mListWords.get(i);
+            //List element
+            Element listElement = doc.createElement("List");
+            rootElement.appendChild(listElement);
 
-                    xmlSerializer.text("\n");
-                    xmlSerializer.text("\n    ");
-                    xmlSerializer.startTag(null, vocabulary);
-                    xmlSerializer.attribute(null, word, currentWord);
+            //set Attributes to listElement
+            Attr attr = doc.createAttribute("name");
+            String fullLine = scn.nextLine();
+            int index = fullLine.indexOf(separate);
+            String nameOfList = fullLine.substring(0,index);
+            attr.setValue(nameOfList);
+            listElement.setAttributeNode(attr);
 
-                    xmlSerializer.text("\n        ");
-                    xmlSerializer.startTag(null, prio);
-                    xmlSerializer.text(String.valueOf(priority[i]));
-                    xmlSerializer.endTag(null, prio);
-                    xmlSerializer.text("\n    ");
+            //inside while loop
+            while(scn.hasNext()) {
+                String line = scn.nextLine();
+                String[] parts = line.split(separate);
 
-                    xmlSerializer.endTag(null, vocabulary);
+                //Scanner-ZeichenTest (mit ZeichenText.txt)
+//                TextView tv = findViewById(R.id.title_1);
+//                tv.setText(parts[0]+parts[1]);
 
-                }
+                //vocabulary element
+                Element vocElement = doc.createElement("vocabulary");
+                listElement.appendChild(vocElement);
+
+                //native Word Element
+                Element natWord = doc.createElement("native");
+                natWord.appendChild(doc.createTextNode(parts[0]));
+                vocElement.appendChild(natWord);
+
+                //foreign Word Element
+                Element forWord = doc.createElement("foreign");
+                forWord.appendChild(doc.createTextNode(parts[1]));
+                vocElement.appendChild(forWord);
+
+                //Priority Element
+                Element priorityElement = doc.createElement("priority");
+                priorityElement.appendChild(doc.createTextNode(parts[2]));
+                vocElement.appendChild(priorityElement);
+
+                //learn status Element
+                Element learnStatus = doc.createElement("learningStat");
+                learnStatus.appendChild(doc.createTextNode("0"));
+                vocElement.appendChild(learnStatus);
             }
-            catch (IOException e) {
-                e.printStackTrace();
+            //write the content into xml file
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+            DOMSource source = new DOMSource(doc);
+            StreamResult result = new StreamResult(mOutFile);
 
-            }
+            transformer.transform(source, result);
 
-            xmlSerializer.text("\n");
-
-            xmlSerializer.endTag(null, "doc");
-            xmlSerializer.endDocument();
-            xmlSerializer.flush();
-            String dataWrite = writer.toString();
-            fileOutputStream.write(dataWrite.getBytes());
-            fileOutputStream.close();
-
-        }
-        catch (FileNotFoundException e) {
+        } catch (ParserConfigurationException e) {
             e.printStackTrace();
-        }
-        catch (IOException e) {
+        } catch (TransformerConfigurationException e) {
             e.printStackTrace();
-        }
-
-
-
-
-    }
-
-    private void createWords() {
-
-        mListWords = new ArrayList<String>(11);
-
-        for(int i = 0; i<=10; i++){
-            mListWords.add("word"+String.valueOf(i));
+        } catch (TransformerException e) {
+            e.printStackTrace();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
     }
 }

@@ -1,9 +1,14 @@
 package com.undisclosed123.parselocalfiles;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Environment;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Layout;
@@ -25,6 +30,8 @@ public class BrowseActivity extends AppCompatActivity {
     private TextView tv;
     private File file;
     private boolean hasParent;
+    private String firstPath;
+    private static int slashes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,16 +45,34 @@ public class BrowseActivity extends AppCompatActivity {
             TextView tv_3 = findViewById(R.id.path_list);
             tv_3.setText(pathDown);
             file = new File(pathDown);
+            firstPath = file.getAbsolutePath();
+
+            TextView tv1 = findViewById(R.id.title_1);
+            if(pathsLeft() == slashes-1) {
+                tv1.setText("Local Storage");
+            }
+            else{
+                int index = firstPath.lastIndexOf("/");
+                String topTitle = firstPath.substring(index+1);
+                tv1.setText(topTitle);
+            }
         }
         else {
 
             //file = new File("/1/2/3/4/5/6/7/8/9");
+            //file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             file = Environment.getExternalStorageDirectory();
-            // hasParent = true;   //makeshift statement, if statement needed
-            while (minTwoSlash()) {
-                file = file.getParentFile();
-                minTwoSlash();
-            }
+            TextView tv_early = findViewById(R.id.path_list2);
+            firstPath = file.getAbsolutePath();
+            tv_early.setText(firstPath);
+
+            TextView tv1 = findViewById(R.id.title_1);
+            tv1.setText("Local Storage");
+
+            slashes = pathsLeft()+1;
+
+            testReadable();
+            testPermission();
         }
 
 
@@ -61,10 +86,32 @@ public class BrowseActivity extends AppCompatActivity {
 
         showFiles();
 
-        String path = file.getAbsolutePath();
-        tv = findViewById(R.id.path_test);
-        tv.setText(path);
+//        String path = file.getAbsolutePath();
+//        tv = findViewById(R.id.path_test);
+//        tv.setText(path);
         
+    }
+
+    private void testPermission() {
+        TextView tv2 = findViewById(R.id.path_list);
+        if (ContextCompat.checkSelfPermission(BrowseActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            tv2.setText("permission Granted");
+        }
+        else{
+            tv2.setText("permission NOT Granted");
+        }
+    }
+
+    private void testReadable() {
+        tv = findViewById(R.id.path_test);
+
+        if(file.canRead()){
+            tv.setText("canRead() true");
+        }
+        else{
+            tv.setText("canRead() false");
+        }
+
     }
 
     private boolean minTwoSlash() {
@@ -89,19 +136,17 @@ public class BrowseActivity extends AppCompatActivity {
     private void showFiles() {
         File[] currentDir = file.listFiles();
 
-        TextView tv2 = findViewById(R.id.path_list);
-        String pathes = "";
-        pathes = file.getAbsolutePath();
-        tv2.setText(pathes);
-
         LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         for(File mFile:currentDir){
-            TextView newView = (TextView) inflater.inflate(R.layout.file_entry, null);
+            String fullPath = mFile.getAbsolutePath();
+            if(mFile.isDirectory()|| fullPath.contains(".csv")|| fullPath.contains(".txt")|| fullPath.contains(".text")) {
+                TextView newView = (TextView) inflater.inflate(R.layout.file_entry, null);
 
-            String entry = mFile.getAbsolutePath();
-            newView.setText(entry);
-            LinearLayout innerParentLayout = findViewById(R.id.parent_f);
-            innerParentLayout.addView(newView, innerParentLayout.getChildCount());
+                String entry = fullPath.substring(firstPath.length() + 1);
+                newView.setText(entry);
+                LinearLayout innerParentLayout = findViewById(R.id.parent_f);
+                innerParentLayout.addView(newView, innerParentLayout.getChildCount());
+            }
         }
 
     }
@@ -155,17 +200,72 @@ public class BrowseActivity extends AppCompatActivity {
     }
 
     public void goParentFile(View view) {
+
+        if(pathsLeft()>= slashes) {
+            int index = firstPath.lastIndexOf("/");
+            String parentPath = firstPath.substring(0, index);
+
+            Intent intent = new Intent(BrowseActivity.this, BrowseActivity.class);
+
+            intent.putExtra("newPath", parentPath);
+            startActivity(intent);
+        }
+        else{
+            Toast toast = new Toast(this);
+            toast.makeText(this,"No higher directory available.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private int pathsLeft() {
+        String tSubject = firstPath;
+        String subString;
+        int counter = 0;
+        while(tSubject.contains("/")) {
+            int index = tSubject.lastIndexOf("/");
+            subString = tSubject.substring(0, index);
+            tSubject = subString;
+            counter++;
+        }
+            return counter;
     }
 
     public void enterDirectory(View view) {
         TextView tv_1 = (TextView) view;
-        String temp = (String)tv_1.getText();
+        final String temp = firstPath+"/"+(String)tv_1.getText();
 
-        Intent intent = new Intent(BrowseActivity.this, BrowseActivity.class);
+        File mFile = new File(temp);
 
-        intent.putExtra("newPath", temp);
-        startActivity(intent);
+        if(mFile.isDirectory()) {
+            Intent intent = new Intent(BrowseActivity.this, BrowseActivity.class);
+
+            intent.putExtra("newPath", temp);
+            startActivity(intent);
+        }
+        else{
+
+                //TODO: promptMethod() which leads to ParseActivity
+            AlertDialog.Builder builder = new AlertDialog.Builder(BrowseActivity.this);
+            builder.setMessage("Do you want to parse this file?").setTitle("File Selected");
+            builder.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Intent intent = new Intent(BrowseActivity.this, ParseActivity.class);
+                    intent.putExtra("path", temp);
+                    startActivity(intent);
+                }
+            })
+                    .setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    });
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
 
 
+
+        }
     }
 }
